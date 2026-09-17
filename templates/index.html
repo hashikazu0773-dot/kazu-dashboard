@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>秘書ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="glow-bg"></div>
+
+<div class="container">
+<header>
+<div class="logo">
+<span class="logo-icon">✨</span>
+<h1>秘書ダッシュボード</h1>
+</div>
+<div class="header-right">
+<div id="date-display" class="date-tag">読み込み中...</div>
+</div>
+</header>
+
+<!-- VIEW 1: 接続設定が終わっていない -->
+<div id="view-config" class="card hidden">
+<div class="card-header">
+<h2>🔑 まだ接続の準備ができていません</h2>
+</div>
+<p class="description">
+Vercelの設定（環境変数）に、Google連携用の鍵がまだ入っていないようです。
+</p>
+</div>
+
+<!-- VIEW 2: Google連携がまだ -->
+<div id="view-auth" class="card text-center hidden">
+<div class="auth-icon">🔒</div>
+<h2>Googleアカウント連携の開始</h2>
+<p class="description">
+下のボタンを押すと、Googleのログイン画面が開きます。
+</p>
+<p class="alert-note">
+※「このアプリはGoogleで確認されていません」と出た場合は「詳細」→「移動」を選んでください。
+</p>
+<div class="action-area">
+<a href="/api/start-auth" class="primary-btn" id="btn-start-auth">Googleと連携する</a>
+</div>
+</div>
+
+<!-- VIEW 3: ダッシュボード本体 -->
+<div id="view-dashboard" class="dashboard-grid hidden">
+<div class="dashboard-col">
+<div class="col-header">
+<h2>📅 本日の予定</h2>
+<span id="calendar-count" class="badge">0 件</span>
+</div>
+<div id="calendar-list" class="list-container"></div>
+</div>
+
+<div class="dashboard-col">
+<section class="info-panel">
+<div class="col-header">
+<h2>📝 メモ</h2>
+<span class="save-state" id="save-state">保存しました</span>
+</div>
+<textarea class="memo-box" id="memo" placeholder="ここに今日のメモを書けます"></textarea>
+<div class="memo-hint">書いた内容は自動で保存されます（少し待つと反映）。</div>
+</section>
+</div>
+
+<div class="dashboard-col">
+<div class="col-header">
+<h2>💳 支払い系メール</h2>
+<span id="mail-count" class="badge">0 件</span>
+</div>
+<div id="mail-list" class="list-container"></div>
+</div>
+</div>
+
+<div id="dashboard-actions" class="text-right hidden">
+<button id="btn-refresh" class="secondary-btn">🔄 更新する</button>
+</div>
+</div>
+
+<script src="/script.js"></script>
+</body>
+</html>
