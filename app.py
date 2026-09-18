@@ -87,6 +87,12 @@ def get_credentials():
     creds = Credentials.from_authorized_user_info(info, SCOPES)
   except Exception:
     return None
+  if creds and creds.expired and creds.refresh_token:
+    try:
+      creds.refresh(GoogleAuthRequest())
+      kv_set('google_oauth_token', creds.to_json())
+    except Exception:
+      return None
   return creds
 
 
