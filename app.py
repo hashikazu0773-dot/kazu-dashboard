@@ -72,3 +72,40 @@ def index():
 def api_status():
   has_credentials = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET and GOOGLE_REDIRECT_URI)
   return jsonify({"has_credentials": has_credentials})
+
+def kv_set(key, value):
+  if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+    return False
+    try:
+      payload = {
+        'key': key,
+        'value': value,
+        'updated_at': datetime.datetime.utcnow().isoformat()
+      }
+      res = requests.post(
+      f'{SUPABASE_URL}/rest/v1/kv_store',
+      headers={**_supabase_headers(), 'Prefer': 'resolution=merge-duplicates'},
+      json=payload,
+      timeout=10
+      )
+      res.raise_for_status()
+      return True
+    except Exception:
+      return False
+@app.route('/api/memo', methods=['GET'])
+def get_memo():
+  text = kv_get('memo', default='')
+  return jsonify({"text": text})
+
+@app.route('/api/memo', methods=['POST'])
+def save_memo():
+  data = request.get_json(silent=True) or {}
+  text = data.get('text', '')
+  ok = kv_set('memo', text)
+  if not ok:
+    return jsonify({"status": "error"}), 500
+  return jsonify({"status": "ok"})
+
+if __name__ == '__main__':
+  app.run(debug=True, port=5000)
+    
