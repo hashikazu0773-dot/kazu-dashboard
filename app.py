@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+from zoneinfo import ZoneInfo
 import requests
 from flask import Flask, jsonify, render_template, request, redirect
 
@@ -10,6 +11,8 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 
 app = Flask(__name__)
+
+JST = ZoneInfo('Asia/Tokyo')
 
 SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
@@ -173,9 +176,9 @@ def api_data():
     return jsonify({"error": "unauthorized"}), 410
   try:
     calendar_service = build('calendar', 'v3', credentials=creds)
-    now = datetime.datetime.now()
-    start_of_day = datetime.datetime(now.year, now.month, now.day, 0, 0, 0).astimezone().isoformat()
-    end_of_day = datetime.datetime(now.year, now.month, now.day, 23, 59, 59).astimezone().isoformat()
+    now = datetime.datetime.now(JST)
+    start_of_day = datetime.datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=JST).isoformat()
+    end_of_day = datetime.datetime(now.year, now.month, now.day, 23, 59, 59, tzinfo=JST).isoformat()
     events_result = calendar_service.events().list(
       calendarId='primary',
       timeMin=start_of_day,
