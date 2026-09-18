@@ -36,6 +36,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const days = ['日', '月', '火', '水', '木', '金', '土'];
     const now = new Date();
     dateDisplay.innerText = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日(${days[now.getDay()]})`;
+    const todayShortDate = document.getElementById('today-short-date');
+    if (todayShortDate) {
+      todayShortDate.innerText = `${now.getMonth() + 1}/${now.getDate()}(${days[now.getDay()]})`;
+    }
   }
 
   function checkStatus() {
