@@ -8,9 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnRefresh = document.getElementById('btn-refresh');
 
   const calendarList = document.getElementById('calendar-list');
-  const calendarCount = document.getElementById('calendar-count');
   const mailList = document.getElementById('mail-list');
-  const mailCount = document.getElementById('mail-count');
 
   const memo = document.getElementById('memo');
   const saveState = document.getElementById('save-state');
@@ -118,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderCalendar(events) {
     calendarList.innerHTML = '';
-    calendarCount.innerText = `${events.length} 件`;
 
     if (events.length === 0) {
       calendarList.innerHTML = `<div class="empty-state">今日の予定はありません。</div>`;
@@ -139,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderMail(mails) {
     mailList.innerHTML = '';
-    mailCount.innerText = `${mails.length} 件`;
 
     if (mails.length === 0) {
       mailList.innerHTML = `<div class="empty-state">支払い系の未読メールはありません。</div>`;
