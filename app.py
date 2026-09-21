@@ -280,11 +280,16 @@ def api_data():
         "all_day": all_day
       })
 
+    # 未読メールは14日間、既読になったメールも直近7日間は表示を続ける。
+    # （カズさんの体調・記憶の事情に合わせて、既読にした直後に画面から消えないようにする対応）
+    # 「newer_than:7d」は既読・未読を問わず全メールにかかるため、
+    # 直近7日間に届く全メール数（実測で最大47件程度）が取得枠に収まるよう
+    # maxResultsも合わせて広げてある。
     gmail_service = build('gmail', 'v1', credentials=creds)
     messages_result = gmail_service.users().messages().list(
       userId='me',
-      q='is:unread newer_than:14d',
-      maxResults=25
+      q='({is:unread newer_than:14d} OR newer_than:7d) -in:draft',
+      maxResults=60
     ).execute()
     messages = messages_result.get('messages', [])
 
