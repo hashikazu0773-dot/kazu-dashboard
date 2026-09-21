@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+import unicodedata
 from zoneinfo import ZoneInfo
 import requests
 from flask import Flask, jsonify, render_template, request, redirect
@@ -34,6 +35,20 @@ JST_WEEKDAYS = ['月', '火', '水', '木', '金', '土', '日']
 DIRECT_DEBIT_KEYWORDS = [
   '口座振替', '口座振替のお知らせ', '口座振替予定', '自動振替', '振替予定日',
 ]
+
+# 「発送・配達」に当たったメールのうち、お届けが完了したことを知らせるメール。
+# ここに当たれば「お届け完了」、当たらなければ「発送済み（進行中）」として数える。
+DELIVERED_KEYWORDS = [
+  '配達済み', 'お届け完了', 'お届けしました', '配送済み', 'delivered',
+]
+
+
+def _normalize(text):
+  # 全角英数字を半角に、大文字を小文字にそろえる。
+  # （例：「ＳＢＩ証券」→「sbi証券」、「Vercel」「vercel.com」→ どちらも「vercel」）
+  # これをしないと、キーワードと表記が少しでも違うだけでメールが検知されず、
+  # 見た目には何も起きていないのに実は非表示になってしまう。
+  return unicodedata.normalize('NFKC', text).lower()
 
 # 表示する（＝重要）メールのカテゴリ。件名・本文の一部・差出人のどこかに
 # 1つでも当てはまれば、そのカテゴリとして画面に出す。
@@ -235,7 +250,7 @@ def api_data():
     calendar_service = build('calendar', 'v3', credentials=creds)
     now = datetime.datetime.now(JST)
     start_of_day = datetime.datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=JST).isoformat()
-    range_end_day = datetime.datetime(now.year, now.month, now.day, 23, 59, 59, tzinfo=JST) + datetime.timedelta(days=2)
+    range_end_day = datetime.datetime(now.year, now.month, now.day, 23, 59, 59, tzinfo=JST) + datetime.timedelta(days=6)
     end_of_day = range_end_day.isoformat()
     events_result = calendar_service.events().list(
       calendarId='primary',
@@ -275,7 +290,8 @@ def api_data():
 
     payment_mail = []
     direct_debit_mail = []
-    shipping_count = 0
+    shipped_count = 0
+    delivered_count = 0
     for message in messages:
       msg = gmail_service.users().messages().get(
         userId='me',
@@ -288,14 +304,14 @@ def api_data():
       sender = next((h['value'] for h in headers if h['name'].lower() == 'from'), '（差出人不明）')
       date_str = next((h['value'] for h in headers if h['name'].lower() == 'date'), '')
       snippet = msg.get('snippet', '')
-      haystack = f"{subject} {snippet} {sender}"
+      haystack = _normalize(f"{subject} {snippet} {sender}")
 
       if ' <' in sender:
         sender = sender.split(' <')[0].replace('"', '')
 
       # 最優先：口座振替のお知らせは他のカテゴリより先にチェックし、
       # 専用リストに入れる（銀行・支払いには入れず二重に出さない）。
-      if any(kw in haystack for kw in DIRECT_DEBIT_KEYWORDS):
+      if any(_normalize(kw) in haystack for kw in DIRECT_DEBIT_KEYWORDS):
         if len(direct_debit_mail) < 5:
           direct_debit_mail.append({
             "subject": subject,
@@ -307,15 +323,18 @@ def api_data():
 
       matched_label = None
       for category in MAIL_CATEGORIES:
-        if any(kw in haystack for kw in category["keywords"]):
+        if any(_normalize(kw) in haystack for kw in category["keywords"]):
           matched_label = category["label"]
           break
       if matched_label is None:
         continue
 
-      # 発送・配達は個別に出さず、件数だけ数える。
+      # 発送・配達は個別に出さず、「発送済み」と「お届け完了」の件数だけ数える。
       if matched_label == "発送・配達":
-        shipping_count += 1
+        if any(_normalize(kw) in haystack for kw in DELIVERED_KEYWORDS):
+          delivered_count += 1
+        else:
+          shipped_count += 1
         continue
 
       if len(payment_mail) < 8:
@@ -331,7 +350,8 @@ def api_data():
       "calendar": formatted_events,
       "payment_mail": payment_mail,
       "direct_debit_mail": direct_debit_mail,
-      "shipping_count": shipping_count
+      "shipped_count": shipped_count,
+      "delivered_count": delivered_count
     })
   except Exception as e:
     return jsonify({"error": str(e)}), 500
