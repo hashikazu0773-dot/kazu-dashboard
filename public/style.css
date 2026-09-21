@@ -88,6 +88,9 @@ header h1{font-family:var(--font-heading);font-size:22px;font-weight:700;}
 .mail-date{font-size:11px;color:var(--text-muted);}
 .mail-subject{font-size:14px;font-weight:600;margin-bottom:4px;}
 .mail-snippet{font-size:12px;color:var(--text-secondary);}
+/* 「確認が必要なメール」のカードだけ、本文を3行までに省略する。
+   口座振替のお知らせ（direct-debit-card）は金額等の見落とし防止のため、ここでは対象外にして全文表示のまま。 */
+.mail-card.urgent .mail-snippet{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden;}
 
 .empty-state{text-align:center;padding:36px 16px;color:var(--text-muted);font-size:13px;border:1px dashed var(--border-color);border-radius:12px;background:rgba(15,19,26,.2);}
 .text-right{display:flex;justify-content:flex-end;}
