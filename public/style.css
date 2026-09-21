@@ -92,6 +92,10 @@ header h1{font-family:var(--font-heading);font-size:22px;font-weight:700;}
    口座振替のお知らせ（direct-debit-card）は金額等の見落とし防止のため、ここでは対象外にして全文表示のまま。 */
 .mail-card.urgent .mail-snippet{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden;}
 
+/* タップするとGmailでそのメールを開けるカード（カーソルを指マークにして、タップできることが分かるようにする） */
+.tappable{cursor:pointer;transition:border-color .15s ease,background-color .15s ease;}
+.tappable:hover{border-color:rgba(148,163,184,.45);background-color:rgba(255,255,255,.03);}
+
 .empty-state{text-align:center;padding:36px 16px;color:var(--text-muted);font-size:13px;border:1px dashed var(--border-color);border-radius:12px;background:rgba(15,19,26,.2);}
 .text-right{display:flex;justify-content:flex-end;}
 .hidden{display:none!important;}

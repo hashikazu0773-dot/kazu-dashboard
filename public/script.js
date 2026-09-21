@@ -164,8 +164,19 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="mail-subject">${escapeHtml(mail.subject)}</div>
         <div class="mail-snippet">${escapeHtml(mail.snippet)}</div>
       `;
+      // タップ（クリック）したら、そのメールをGmailで直接開く。
+      if (mail.id) {
+        card.classList.add('tappable');
+        card.addEventListener('click', () => openGmailMessage(mail.id));
+      }
       mailList.appendChild(card);
     });
+  }
+
+  // GmailのメールIDから、そのメールをGmail（ブラウザ）で開く。
+  // 今開いているGoogleアカウント（u/0＝一番上のアカウント）で開く点に注意。
+  function openGmailMessage(mailId) {
+    window.open(`https://mail.google.com/mail/u/0/#all/${mailId}`, '_blank', 'noopener');
   }
 
   function renderDirectDebit(mails) {
@@ -194,6 +205,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="mail-subject">${escapeHtml(mail.subject)}</div>
         <div class="mail-snippet">${escapeHtml(mail.snippet)}</div>
       `;
+      if (mail.id) {
+        card.classList.add('tappable');
+        card.addEventListener('click', () => openGmailMessage(mail.id));
+      }
       directDebitList.appendChild(card);
     });
   }
