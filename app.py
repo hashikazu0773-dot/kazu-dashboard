@@ -28,6 +28,13 @@ SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
 
 JST_WEEKDAYS = ['月', '火', '水', '木', '金', '土', '日']
 
+# 「口座振替予定のお知らせ」等、お金が自動で引かれる予定を知らせるメール。
+# これに当たったら他のカテゴリより先に、画面いちばん上の専用の赤枠に出す
+# （銀行・支払いカテゴリには入れず、二重に出さない）。
+DIRECT_DEBIT_KEYWORDS = [
+  '口座振替', '口座振替のお知らせ', '口座振替予定', '自動振替', '振替予定日',
+]
+
 # 表示する（＝重要）メールのカテゴリ。件名・本文の一部・差出人のどこかに
 # 1つでも当てはまれば、そのカテゴリとして画面に出す。
 # 「注文確認・メルマガ・セール・おすすめ・ニュース」等はここに載っていない
@@ -55,6 +62,7 @@ MAIL_CATEGORIES = [
     "label": "システム",
     "keywords": [
       'GitHub', 'Vercel', 'Supabase', 'Anthropic', 'Claude',
+      'OpenAI', 'ChatGPT', 'GPT-', 'GPT4', 'GPT5',
       'デプロイ', 'ビルドが失敗', 'ビルドエラー', 'サーバー障害', 'メンテナンスのお知らせ',
     ]
   },
@@ -265,6 +273,8 @@ def api_data():
     messages = messages_result.get('messages', [])
 
     payment_mail = []
+    direct_debit_mail = []
+    shipping_count = 0
     for message in messages:
       msg = gmail_service.users().messages().get(
         userId='me',
@@ -278,6 +288,22 @@ def api_data():
       date_str = next((h['value'] for h in headers if h['name'].lower() == 'date'), '')
       snippet = msg.get('snippet', '')
       haystack = f"{subject} {snippet} {sender}"
+
+      if ' <' in sender:
+        sender = sender.split(' <')[0].replace('"', '')
+
+      # 最優先：口座振替のお知らせは他のカテゴリより先にチェックし、
+      # 専用リストに入れる（銀行・支払いには入れず二重に出さない）。
+      if any(kw in haystack for kw in DIRECT_DEBIT_KEYWORDS):
+        if len(direct_debit_mail) < 5:
+          direct_debit_mail.append({
+            "subject": subject,
+            "from": sender,
+            "date": date_str,
+            "snippet": snippet,
+          })
+        continue
+
       matched_label = None
       for category in MAIL_CATEGORIES:
         if any(kw in haystack for kw in category["keywords"]):
@@ -285,21 +311,26 @@ def api_data():
           break
       if matched_label is None:
         continue
-      if ' <' in sender:
-        sender = sender.split(' <')[0].replace('"', '')
-      payment_mail.append({
-        "subject": subject,
-        "from": sender,
-        "date": date_str,
-        "snippet": snippet,
-        "category": matched_label
-      })
-      if len(payment_mail) >= 8:
-        break
+
+      # 発送・配達は個別に出さず、件数だけ数える。
+      if matched_label == "発送・配達":
+        shipping_count += 1
+        continue
+
+      if len(payment_mail) < 8:
+        payment_mail.append({
+          "subject": subject,
+          "from": sender,
+          "date": date_str,
+          "snippet": snippet,
+          "category": matched_label
+        })
 
     return jsonify({
       "calendar": formatted_events,
-      "payment_mail": payment_mail
+      "payment_mail": payment_mail,
+      "direct_debit_mail": direct_debit_mail,
+      "shipping_count": shipping_count
     })
   except Exception as e:
     return jsonify({"error": str(e)}), 500
