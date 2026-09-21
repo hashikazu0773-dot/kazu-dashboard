@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     calendarList.innerHTML = '';
 
     if (events.length === 0) {
-      calendarList.innerHTML = `<div class="empty-state">今日の予定はありません。</div>`;
+      calendarList.innerHTML = `<div class="empty-state">今日から3日間の予定はありません。</div>`;
       return;
     }
 
@@ -126,8 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const timeClass = event.all_day ? 'event-time all-day' : 'event-time';
       const card = document.createElement('div');
       card.className = 'item-card';
+      const dateLabel = event.date_label ? `${escapeHtml(event.date_label)} ` : '';
       card.innerHTML = `
-        <div class="${timeClass}">${event.display_time}</div>
+        <div class="${timeClass}">${dateLabel}${event.display_time}</div>
         <div class="event-title">${escapeHtml(event.summary)}</div>
       `;
       calendarList.appendChild(card);
@@ -138,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mailList.innerHTML = '';
 
     if (mails.length === 0) {
-      mailList.innerHTML = `<div class="empty-state">支払い系の未読メールはありません。</div>`;
+      mailList.innerHTML = `<div class="empty-state">確認が必要な未読メールはありません。</div>`;
       return;
     }
 
@@ -150,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const dateStr = isNaN(dateObj.getTime()) ? mail.date : `${dateObj.getMonth() + 1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
 
       card.innerHTML = `
-        <span class="mail-flag">支払い系</span>
+        <span class="mail-flag">${escapeHtml(mail.category || '重要')}</span>
         <div class="mail-header">
           <span class="mail-sender" title="${escapeHtml(mail.from)}">${escapeHtml(mail.from)}</span>
           <span class="mail-date">${escapeHtml(dateStr)}</span>

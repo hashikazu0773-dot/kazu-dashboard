@@ -75,7 +75,7 @@ header h1{font-family:var(--font-heading);font-size:22px;font-weight:700;}
 .mail-card{position:relative;background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:16px;}
 .mail-card.urgent{border-color:rgba(251,113,133,.45);}
 .mail-flag{position:absolute;top:12px;right:12px;font-size:10px;font-weight:700;letter-spacing:.03em;color:var(--accent-red);background:rgba(251,113,133,.12);border:1px solid rgba(251,113,133,.35);border-radius:999px;padding:3px 9px;}
-.mail-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;padding-right:70px;}
+.mail-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;padding-right:110px;}
 .mail-sender{font-weight:600;font-size:13px;color:var(--accent-purple);}
 .mail-date{font-size:11px;color:var(--text-muted);}
 .mail-subject{font-size:14px;font-weight:600;margin-bottom:4px;}
