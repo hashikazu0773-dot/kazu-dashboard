@@ -64,6 +64,7 @@ MAIL_CATEGORIES = [
       'GitHub', 'Vercel', 'Supabase', 'Anthropic', 'Claude',
       'OpenAI', 'ChatGPT', 'GPT-', 'GPT4', 'GPT5',
       'デプロイ', 'ビルドが失敗', 'ビルドエラー', 'サーバー障害', 'メンテナンスのお知らせ',
+      'Google Apps Script', 'Apps Script', 'Summary of failures', 'has failed to finish',
     ]
   },
   {
