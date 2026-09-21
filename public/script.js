@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const calendarList = document.getElementById('calendar-list');
   const mailList = document.getElementById('mail-list');
+  const directDebitBanner = document.getElementById('direct-debit-banner');
+  const directDebitList = document.getElementById('direct-debit-list');
+  const shippingSummary = document.getElementById('shipping-summary');
 
   const memo = document.getElementById('memo');
   const saveState = document.getElementById('save-state');
@@ -81,6 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderCalendar(data.calendar);
         renderMail(data.payment_mail);
+        renderDirectDebit(data.direct_debit_mail);
+        renderShippingSummary(data.shipping_count);
       })
       .catch(err => {
         if (btnRefresh) btnRefresh.innerText = '🔄 更新する';
@@ -161,6 +166,47 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       mailList.appendChild(card);
     });
+  }
+
+  function renderDirectDebit(mails) {
+    if (!directDebitBanner || !directDebitList) return;
+    mails = mails || [];
+
+    if (mails.length === 0) {
+      directDebitBanner.classList.add('hidden');
+      directDebitList.innerHTML = '';
+      return;
+    }
+
+    directDebitBanner.classList.remove('hidden');
+    directDebitList.innerHTML = '';
+    mails.forEach(mail => {
+      const dateObj = new Date(mail.date);
+      const dateStr = isNaN(dateObj.getTime()) ? mail.date : `${dateObj.getMonth() + 1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+
+      const card = document.createElement('div');
+      card.className = 'item-card direct-debit-card';
+      card.innerHTML = `
+        <div class="mail-header">
+          <span class="mail-sender" title="${escapeHtml(mail.from)}">${escapeHtml(mail.from)}</span>
+          <span class="mail-date">${escapeHtml(dateStr)}</span>
+        </div>
+        <div class="mail-subject">${escapeHtml(mail.subject)}</div>
+        <div class="mail-snippet">${escapeHtml(mail.snippet)}</div>
+      `;
+      directDebitList.appendChild(card);
+    });
+  }
+
+  function renderShippingSummary(count) {
+    if (!shippingSummary) return;
+    if (!count || count <= 0) {
+      shippingSummary.classList.add('hidden');
+      shippingSummary.innerText = '';
+      return;
+    }
+    shippingSummary.classList.remove('hidden');
+    shippingSummary.innerText = `📦 発送・配達：${count}件`;
   }
 
   function escapeHtml(string) {
