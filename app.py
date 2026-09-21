@@ -319,6 +319,7 @@ def api_data():
       if any(_normalize(kw) in haystack for kw in DIRECT_DEBIT_KEYWORDS):
         if len(direct_debit_mail) < 5:
           direct_debit_mail.append({
+            "id": message['id'],
             "subject": subject,
             "from": sender,
             "date": date_str,
@@ -344,6 +345,7 @@ def api_data():
 
       if len(payment_mail) < 8:
         payment_mail.append({
+          "id": message['id'],
           "subject": subject,
           "from": sender,
           "date": date_str,
