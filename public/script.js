@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCalendar(data.calendar);
         renderMail(data.payment_mail);
         renderDirectDebit(data.direct_debit_mail);
-        renderShippingSummary(data.shipping_count);
+        renderShippingSummary(data.shipped_count, data.delivered_count);
       })
       .catch(err => {
         if (btnRefresh) btnRefresh.innerText = '🔄 更新する';
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     calendarList.innerHTML = '';
 
     if (events.length === 0) {
-      calendarList.innerHTML = `<div class="empty-state">今日から3日間の予定はありません。</div>`;
+      calendarList.innerHTML = `<div class="empty-state">今日から7日間の予定はありません。</div>`;
       return;
     }
 
@@ -198,15 +198,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function renderShippingSummary(count) {
+  function renderShippingSummary(shippedCount, deliveredCount) {
     if (!shippingSummary) return;
-    if (!count || count <= 0) {
+    shippedCount = shippedCount || 0;
+    deliveredCount = deliveredCount || 0;
+    if (shippedCount <= 0 && deliveredCount <= 0) {
       shippingSummary.classList.add('hidden');
       shippingSummary.innerText = '';
       return;
     }
     shippingSummary.classList.remove('hidden');
-    shippingSummary.innerText = `📦 発送・配達：${count}件`;
+    shippingSummary.innerText = `📦発送済み：${shippedCount}件　✅お届け完了：${deliveredCount}件`;
   }
 
   function escapeHtml(string) {
