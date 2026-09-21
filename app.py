@@ -26,10 +26,57 @@ GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI')
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
 
-PAYMENT_KEYWORDS = [
-  '請求', '支払', 'お支払', '支払い', '払込', '振込', '引き落とし', '引落',
-  'カード', 'ご利用', '利用額', '利用料', '料金', '未払', '督促', '期限',
-  'invoice', 'payment', 'billing', 'due'
+JST_WEEKDAYS = ['月', '火', '水', '木', '金', '土', '日']
+
+# 表示する（＝重要）メールのカテゴリ。件名・本文の一部・差出人のどこかに
+# 1つでも当てはまれば、そのカテゴリとして画面に出す。
+# 「注文確認・メルマガ・セール・おすすめ・ニュース」等はここに載っていない
+# ＝どのカテゴリにも当たらないので、そのまま自動的に非表示になる。
+MAIL_CATEGORIES = [
+  {
+    "label": "銀行・支払い",
+    "keywords": [
+      '請求', '支払', 'お支払', '支払い', '払込', '振込', '引き落とし', '引落',
+      'カード', 'ご利用', '利用額', '利用料', '料金', '未払', '督促', '期限',
+      'invoice', 'payment', 'billing', 'due',
+      'ドコモSMTBネット銀行', '住信SBIネット銀行', 'NTTファイナンス', 'SBI証券',
+    ]
+  },
+  {
+    "label": "セキュリティ通知",
+    "keywords": [
+      'ログイン', '不正', 'セキュリティ', '認証コード', '確認コード', 'ワンタイム',
+      '本人確認', 'パスワード', '心当たりのない', 'アクセスを検出', 'アクセスがありました',
+      'security', 'verification code', 'suspicious',
+    ]
+  },
+  {
+    "label": "システム",
+    "keywords": [
+      'GitHub', 'Vercel', 'Supabase', 'Anthropic', 'Claude',
+      'デプロイ', 'ビルドが失敗', 'ビルドエラー', 'サーバー障害', 'メンテナンスのお知らせ',
+    ]
+  },
+  {
+    "label": "発送・配達",
+    "keywords": [
+      '発送', '配達', 'お届け', '配送', '出荷', 'お荷物', '配達予定', '追跡番号',
+      'delivery', 'shipped',
+    ]
+  },
+  {
+    "label": "旅行・交通",
+    "keywords": [
+      'ご予約', '搭乗', 'フライト', '航空券', '新幹線', '宿泊', 'チェックイン',
+      'スカイマーク', 'JAL', 'ANA',
+    ]
+  },
+  {
+    "label": "病院・健康",
+    "keywords": [
+      '診察', '受診', '健康診断', '検査結果', 'クリニック', '通院',
+    ]
+  },
 ]
 
 
@@ -178,7 +225,8 @@ def api_data():
     calendar_service = build('calendar', 'v3', credentials=creds)
     now = datetime.datetime.now(JST)
     start_of_day = datetime.datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=JST).isoformat()
-    end_of_day = datetime.datetime(now.year, now.month, now.day, 23, 59, 59, tzinfo=JST).isoformat()
+    range_end_day = datetime.datetime(now.year, now.month, now.day, 23, 59, 59, tzinfo=JST) + datetime.timedelta(days=2)
+    end_of_day = range_end_day.isoformat()
     events_result = calendar_service.events().list(
       calendarId='primary',
       timeMin=start_of_day,
@@ -192,13 +240,18 @@ def api_data():
     for event in events:
       start = event['start'].get('dateTime', event['start'].get('date'))
       all_day = 'date' in event['start']
-      start_time = "終日"
-      if not all_day:
+      if all_day:
+        start_time = "終日"
+        start_date = datetime.date.fromisoformat(start)
+      else:
         start_dt = datetime.datetime.fromisoformat(start)
         start_time = start_dt.strftime('%H:%M')
+        start_date = start_dt.date()
+      date_label = f"{start_date.month}/{start_date.day}({JST_WEEKDAYS[start_date.weekday()]})"
       formatted_events.append({
         "summary": event.get('summary', '（件名なし）'),
         "display_time": start_time,
+        "date_label": date_label,
         "all_day": all_day
       })
 
@@ -223,8 +276,13 @@ def api_data():
       sender = next((h['value'] for h in headers if h['name'].lower() == 'from'), '（差出人不明）')
       date_str = next((h['value'] for h in headers if h['name'].lower() == 'date'), '')
       snippet = msg.get('snippet', '')
-      haystack = f"{subject} {snippet}"
-      if not any(kw in haystack for kw in PAYMENT_KEYWORDS):
+      haystack = f"{subject} {snippet} {sender}"
+      matched_label = None
+      for category in MAIL_CATEGORIES:
+        if any(kw in haystack for kw in category["keywords"]):
+          matched_label = category["label"]
+          break
+      if matched_label is None:
         continue
       if ' <' in sender:
         sender = sender.split(' <')[0].replace('"', '')
@@ -232,9 +290,10 @@ def api_data():
         "subject": subject,
         "from": sender,
         "date": date_str,
-        "snippet": snippet
+        "snippet": snippet,
+        "category": matched_label
       })
-      if len(payment_mail) >= 5:
+      if len(payment_mail) >= 8:
         break
 
     return jsonify({
