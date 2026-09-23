@@ -124,6 +124,21 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(err => console.error('memo save failed', err));
   }
 
+  // 同じ日付（date_label）が連続している予定を、1枚のカードにまとめる。
+  // データはAPI側ですでに日時順に並んでいるため、同じ日付は必ず連続している。
+  function groupByDateLabel(items) {
+    const groups = [];
+    let current = null;
+    items.forEach(item => {
+      if (!current || current.date_label !== item.date_label) {
+        current = { date_label: item.date_label, items: [] };
+        groups.push(current);
+      }
+      current.items.push(item);
+    });
+    return groups;
+  }
+
   function renderCalendar(events) {
     calendarList.innerHTML = '';
 
@@ -132,15 +147,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    events.forEach(event => {
-      const timeClass = event.all_day ? 'event-time all-day' : 'event-time';
+    groupByDateLabel(events).forEach(group => {
       const card = document.createElement('div');
       card.className = 'item-card';
-      const dateLabel = event.date_label ? `${escapeHtml(event.date_label)} ` : '';
-      card.innerHTML = `
-        <div class="${timeClass}">${dateLabel}${event.display_time}</div>
-        <div class="event-title">${escapeHtml(event.summary)}</div>
-      `;
+      const rows = group.items.map(event => {
+        const timeClass = event.all_day ? 'event-time-inline all-day' : 'event-time-inline';
+        return `<div class="event-row"><span class="${timeClass}">${escapeHtml(event.display_time)}</span><span class="event-title-inline">${escapeHtml(event.summary)}</span></div>`;
+      }).join('');
+      card.innerHTML = `<div class="event-date-heading">${escapeHtml(group.date_label)}</div>${rows}`;
       calendarList.appendChild(card);
     });
   }
@@ -154,13 +168,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    deadlines.forEach(item => {
+    groupByDateLabel(deadlines).forEach(group => {
+      const soon = group.items[0].soon;
       const card = document.createElement('div');
-      card.className = 'item-card deadline-card' + (item.soon ? ' soon' : '');
-      card.innerHTML = `
-        <div class="event-time">${escapeHtml(item.date_label)} <span class="deadline-days">${escapeHtml(item.days_label)}</span></div>
-        <div class="event-title">${escapeHtml(item.summary)}</div>
-      `;
+      card.className = 'item-card deadline-card' + (soon ? ' soon' : '');
+      const rows = group.items.map(item => `<div class="event-row"><span class="event-title-inline">${escapeHtml(item.summary)}</span></div>`).join('');
+      card.innerHTML = `<div class="event-date-heading">${escapeHtml(group.date_label)} <span class="deadline-days">${escapeHtml(group.items[0].days_label)}</span></div>${rows}`;
       deadlineList.appendChild(card);
     });
   }
