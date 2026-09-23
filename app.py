@@ -80,10 +80,15 @@ MAIL_CATEGORIES = [
     ]
   },
   {
+    "label": "AI関連",
+    "keywords": [
+      'Anthropic', 'Claude', 'OpenAI', 'ChatGPT', 'GPT-', 'GPT4', 'GPT5', 'Gemini',
+    ]
+  },
+  {
     "label": "システム",
     "keywords": [
-      'GitHub', 'Vercel', 'Supabase', 'Anthropic', 'Claude',
-      'OpenAI', 'ChatGPT', 'GPT-', 'GPT4', 'GPT5',
+      'GitHub', 'Vercel', 'Supabase',
       'デプロイ', 'ビルドが失敗', 'ビルドエラー', 'サーバー障害', 'メンテナンスのお知らせ',
       'Google Apps Script', 'Apps Script', 'Summary of failures', 'has failed to finish',
     ]
