@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnRefresh = document.getElementById('btn-refresh');
 
   const calendarList = document.getElementById('calendar-list');
+  const deadlineList = document.getElementById('deadline-list');
+  const yesterdayList = document.getElementById('yesterday-list');
+  const yesterdayDate = document.getElementById('yesterday-date');
   const mailList = document.getElementById('mail-list');
   const directDebitBanner = document.getElementById('direct-debit-banner');
   const directDebitList = document.getElementById('direct-debit-list');
@@ -83,6 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         renderCalendar(data.calendar);
+        renderDeadlines(data.deadlines);
+        renderYesterday(data.yesterday_date_label, data.yesterday_events);
         renderMail(data.payment_mail);
         renderDirectDebit(data.direct_debit_mail);
         renderShippingSummary(data.shipped_count, data.delivered_count);
@@ -137,6 +142,48 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="event-title">${escapeHtml(event.summary)}</div>
       `;
       calendarList.appendChild(card);
+    });
+  }
+
+  function renderDeadlines(deadlines) {
+    deadlineList.innerHTML = '';
+    deadlines = deadlines || [];
+
+    if (deadlines.length === 0) {
+      deadlineList.innerHTML = `<div class="empty-state">60日以内の期限はありません。</div>`;
+      return;
+    }
+
+    deadlines.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'item-card deadline-card' + (item.soon ? ' soon' : '');
+      card.innerHTML = `
+        <div class="event-time">${escapeHtml(item.date_label)} <span class="deadline-days">${escapeHtml(item.days_label)}</span></div>
+        <div class="event-title">${escapeHtml(item.summary)}</div>
+      `;
+      deadlineList.appendChild(card);
+    });
+  }
+
+  function renderYesterday(dateLabel, events) {
+    if (yesterdayDate) yesterdayDate.innerText = dateLabel || '';
+    yesterdayList.innerHTML = '';
+    events = events || [];
+
+    if (events.length === 0) {
+      yesterdayList.innerHTML = `<div class="empty-state">昨日の予定はありません。</div>`;
+      return;
+    }
+
+    events.forEach(event => {
+      const timeClass = event.all_day ? 'event-time all-day' : 'event-time';
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.innerHTML = `
+        <div class="${timeClass}">${escapeHtml(event.display_time)}</div>
+        <div class="event-title">${escapeHtml(event.summary)}</div>
+      `;
+      yesterdayList.appendChild(card);
     });
   }
 

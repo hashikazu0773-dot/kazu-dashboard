@@ -29,6 +29,10 @@ SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
 
 JST_WEEKDAYS = ['月', '火', '水', '木', '金', '土', '日']
 
+DEADLINE_LOOKAHEAD_DAYS = 60  # 「近づいている期限」で、今日から何日先まで見るか
+DEADLINE_COLOR_ID = '11'      # Googleカレンダーの「トマト(赤)」色に対応するID
+DEADLINE_SOON_DAYS = 7        # 残り日数がこれ以下なら目立たせる
+
 # 「口座振替予定のお知らせ」等、お金が自動で引かれる予定を知らせるメール。
 # これに当たったら他のカテゴリより先に、画面いちばん上の専用の赤枠に出す
 # （銀行・支払いカテゴリには入れず、二重に出さない）。
@@ -103,6 +107,19 @@ MAIL_CATEGORIES = [
     ]
   },
 ]
+
+
+def _parse_event_start(event):
+  # イベントの開始日時を、表示用の時刻と日付に分ける。終日予定は時刻の代わりに"終日"を返す。
+  start = event['start'].get('dateTime', event['start'].get('date'))
+  if 'date' in event['start']:
+    return "終日", datetime.date.fromisoformat(start), True
+  start_dt = datetime.datetime.fromisoformat(start)
+  return start_dt.strftime('%H:%M'), start_dt.date(), False
+
+
+def _format_date_label(date_obj):
+  return f"{date_obj.month}/{date_obj.day}({JST_WEEKDAYS[date_obj.weekday()]})"
 
 
 def _supabase_headers():
@@ -263,20 +280,56 @@ def api_data():
 
     formatted_events = []
     for event in events:
-      start = event['start'].get('dateTime', event['start'].get('date'))
-      all_day = 'date' in event['start']
-      if all_day:
-        start_time = "終日"
-        start_date = datetime.date.fromisoformat(start)
-      else:
-        start_dt = datetime.datetime.fromisoformat(start)
-        start_time = start_dt.strftime('%H:%M')
-        start_date = start_dt.date()
-      date_label = f"{start_date.month}/{start_date.day}({JST_WEEKDAYS[start_date.weekday()]})"
+      start_time, start_date, all_day = _parse_event_start(event)
       formatted_events.append({
         "summary": event.get('summary', '（件名なし）'),
         "display_time": start_time,
-        "date_label": date_label,
+        "date_label": _format_date_label(start_date),
+        "all_day": all_day
+      })
+
+    # ⏰ 近づいている期限：赤色（colorId "11"）の予定を、今日からDEADLINE_LOOKAHEAD_DAYS日先まで
+    today_date = now.date()
+    deadline_range_end = datetime.datetime(now.year, now.month, now.day, 23, 59, 59, tzinfo=JST) + datetime.timedelta(days=DEADLINE_LOOKAHEAD_DAYS)
+    deadline_events_result = calendar_service.events().list(
+      calendarId='primary',
+      timeMin=start_of_day,
+      timeMax=deadline_range_end.isoformat(),
+      singleEvents=True,
+      orderBy='startTime'
+    ).execute()
+
+    deadlines = []
+    for event in deadline_events_result.get('items', []):
+      if event.get('colorId') != DEADLINE_COLOR_ID:
+        continue
+      _, deadline_date, _ = _parse_event_start(event)
+      days_left = (deadline_date - today_date).days
+      deadlines.append({
+        "summary": event.get('summary', '（件名なし）'),
+        "date_label": _format_date_label(deadline_date),
+        "days_label": "今日" if days_left == 0 else f"あと{days_left}日",
+        "soon": days_left <= DEADLINE_SOON_DAYS
+      })
+
+    # 📖 昨日：Googleカレンダーの予定（時刻順）
+    yesterday_date = today_date - datetime.timedelta(days=1)
+    yesterday_start = datetime.datetime(yesterday_date.year, yesterday_date.month, yesterday_date.day, 0, 0, 0, tzinfo=JST)
+    yesterday_end = datetime.datetime(yesterday_date.year, yesterday_date.month, yesterday_date.day, 23, 59, 59, tzinfo=JST)
+    yesterday_events_result = calendar_service.events().list(
+      calendarId='primary',
+      timeMin=yesterday_start.isoformat(),
+      timeMax=yesterday_end.isoformat(),
+      singleEvents=True,
+      orderBy='startTime'
+    ).execute()
+
+    yesterday_events = []
+    for event in yesterday_events_result.get('items', []):
+      start_time, _, all_day = _parse_event_start(event)
+      yesterday_events.append({
+        "summary": event.get('summary', '（件名なし）'),
+        "display_time": start_time,
         "all_day": all_day
       })
 
@@ -355,6 +408,9 @@ def api_data():
 
     return jsonify({
       "calendar": formatted_events,
+      "deadlines": deadlines,
+      "yesterday_date_label": _format_date_label(yesterday_date),
+      "yesterday_events": yesterday_events,
       "payment_mail": payment_mail,
       "direct_debit_mail": direct_debit_mail,
       "shipped_count": shipped_count,

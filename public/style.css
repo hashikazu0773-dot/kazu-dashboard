@@ -56,6 +56,10 @@ header h1{font-family:var(--font-heading);font-size:22px;font-weight:700;}
 .dashboard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start;}
 @media (max-width:900px){.dashboard-grid{grid-template-columns:1fr;}}
 
+.deadline-card.soon{background:var(--amber-bg);border-color:var(--accent-amber);}
+.deadline-days{font-weight:600;color:var(--accent-purple);margin-left:6px;}
+.deadline-card.soon .deadline-days{color:var(--accent-amber);}
+
 .alert-banner{background:rgba(251,113,133,.10);border:2px solid var(--accent-red);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;}
 .alert-banner-title{font-family:var(--font-heading);font-weight:700;font-size:15px;color:var(--accent-red);}
 .direct-debit-card{border-color:rgba(251,113,133,.5);background:rgba(15,19,26,.5);}
