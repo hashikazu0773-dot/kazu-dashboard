@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const mailList = document.getElementById('mail-list');
   const directDebitBanner = document.getElementById('direct-debit-banner');
   const directDebitList = document.getElementById('direct-debit-list');
+  const claudeCodeNewsCard = document.getElementById('claude-code-news-card');
+  const claudeCodeNewsList = document.getElementById('claude-code-news-list');
   const shippingSummary = document.getElementById('shipping-summary');
 
   const memo = document.getElementById('memo');
@@ -86,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         renderCalendar(data.calendar);
+        renderClaudeCodeNews(data.claude_code_news);
         renderDeadlines(data.deadlines);
         renderYesterday(data.yesterday_date_label, data.yesterday_events);
         renderMail(data.payment_mail);
@@ -237,6 +240,36 @@ document.addEventListener('DOMContentLoaded', () => {
   // 今開いているGoogleアカウント（u/0＝一番上のアカウント）で開く点に注意。
   function openGmailMessage(mailId) {
     window.open(`https://mail.google.com/mail/u/0/#all/${mailId}`, '_blank', 'noopener');
+  }
+
+  function renderClaudeCodeNews(items) {
+    if (!claudeCodeNewsCard || !claudeCodeNewsList) return;
+    items = items || [];
+
+    if (items.length === 0) {
+      claudeCodeNewsCard.classList.add('hidden');
+      claudeCodeNewsList.innerHTML = '';
+      return;
+    }
+
+    claudeCodeNewsCard.classList.remove('hidden');
+    claudeCodeNewsList.innerHTML = '';
+    items.forEach(item => {
+      const dateObj = new Date(item.date);
+      const dateStr = isNaN(dateObj.getTime()) ? item.date : `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.innerHTML = `
+        <div class="event-time">${escapeHtml(dateStr)}</div>
+        <div class="event-title">${escapeHtml(item.subject)}</div>
+      `;
+      if (item.id) {
+        card.classList.add('tappable');
+        card.addEventListener('click', () => openGmailMessage(item.id));
+      }
+      claudeCodeNewsList.appendChild(card);
+    });
   }
 
   function renderDirectDebit(mails) {

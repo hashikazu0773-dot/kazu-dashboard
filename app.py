@@ -46,6 +46,11 @@ DELIVERED_KEYWORDS = [
   '配達済み', 'お届け完了', 'お届けしました', '配送済み', 'delivered',
 ]
 
+# Claude Codeの公式ニュースレター。カズさんが見落としたくないと指定したため、
+# 「確認が必要なメール」の8件上限とは別に、専用の枠へ必ず表示する。
+CLAUDE_CODE_NEWS_SENDER = 'no-reply@email.claude.com'
+CLAUDE_CODE_NEWS_MAX = 3
+
 
 def _normalize(text):
   # 全角英数字を半角に、大文字を小文字にそろえる。
@@ -365,6 +370,7 @@ def api_data():
 
     payment_mail = []
     direct_debit_mail = []
+    claude_code_news = []
     shipped_count = 0
     delivered_count = 0
     for message in messages:
@@ -394,6 +400,17 @@ def api_data():
             "from": sender,
             "date": date_str,
             "snippet": snippet,
+          })
+        continue
+
+      # Claude Codeの公式ニュースレターも、確認が必要なメールの8件上限とは別に、
+      # 専用の枠へ必ず入れる（カズさんが見落としたくないと指定したため）。
+      if _normalize(CLAUDE_CODE_NEWS_SENDER) in haystack:
+        if len(claude_code_news) < CLAUDE_CODE_NEWS_MAX:
+          claude_code_news.append({
+            "id": message['id'],
+            "subject": subject,
+            "date": date_str,
           })
         continue
 
@@ -434,6 +451,7 @@ def api_data():
       "yesterday_events": yesterday_events,
       "payment_mail": payment_mail,
       "direct_debit_mail": direct_debit_mail,
+      "claude_code_news": claude_code_news,
       "shipped_count": shipped_count,
       "delivered_count": delivered_count
     })
