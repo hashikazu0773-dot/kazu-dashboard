@@ -85,6 +85,26 @@ def _parse_direct_debit_fields(body_text):
   return fields
 
 
+# 「口座振替先／引落金額／口座引落日」の3項目が無い文章形式の通知（例：
+# 「定額自動振替サービス」取引成立のお知らせ）向け。宛名（〜様／〜さま）と、
+# この定型の締めの文言より後ろを切り落とし、本題の文章だけを残す。
+DIRECT_DEBIT_BOILERPLATE_MARKERS = [
+  '本メールは送信専用', 'ご不明な点について', '＜発行＞',
+]
+
+
+def _clean_direct_debit_body(body_text):
+  lines = [line.strip() for line in body_text.splitlines() if line.strip()]
+  if lines and re.search(r'(様|さま)$', lines[0]):
+    lines = lines[1:]
+  kept = []
+  for line in lines:
+    if any(marker in line for marker in DIRECT_DEBIT_BOILERPLATE_MARKERS):
+      break
+    kept.append(line)
+  return ''.join(kept)
+
+
 def _normalize(text):
   # 全角英数字を半角に、大文字を小文字にそろえる。
   # （例：「ＳＢＩ証券」→「sbi証券」、「Vercel」「vercel.com」→ どちらも「vercel」）
@@ -425,7 +445,9 @@ def api_data():
 
       # 最優先：口座振替のお知らせは他のカテゴリより先にチェックし、
       # 専用リストに入れる（銀行・支払いには入れず二重に出さない）。
-      if any(_normalize(kw) in haystack for kw in DIRECT_DEBIT_KEYWORDS):
+      # 判定は件名だけで行う（本文・差出人まで見ると、例えば「銀行名変更のご案内」に
+      # 「口座振替による自動引落は手続き不要」と一文あるだけで誤って混ざってしまうため）。
+      if any(_normalize(kw) in _normalize(subject) for kw in DIRECT_DEBIT_KEYWORDS):
         if len(direct_debit_mail) < 5:
           # 概要（スニペット）には「口座振替先・引落金額・口座引落日」が出ないため、
           # 本文をまるごと取得してこの3項目だけを抜き出す。
@@ -434,6 +456,9 @@ def api_data():
           ).execute()
           body_text = _extract_plain_text(full_msg.get('payload', {}))
           fields = _parse_direct_debit_fields(body_text)
+          # 3項目が見つからない文章形式の通知は、定型の締めの文言を切り落とした
+          # 本文をかわりに使う（取れなければ元のスニペットのまま）。
+          fallback_text = _clean_direct_debit_body(body_text) or snippet
           direct_debit_mail.append({
             "id": message['id'],
             "subject": subject,
@@ -442,7 +467,7 @@ def api_data():
             "amount": fields.get('amount'),
             "debit_date": fields.get('debit_date'),
             "date": date_str,
-            "snippet": snippet,
+            "snippet": fallback_text,
           })
         continue
 
