@@ -70,19 +70,21 @@ MAIL_CATEGORIES = [
     ]
   },
   {
+    "label": "AI関連",
+    "keywords": [
+      'Anthropic', 'Claude', 'OpenAI', 'ChatGPT', 'GPT-', 'GPT4', 'GPT5', 'Gemini',
+    ]
+  },
+  {
     "label": "セキュリティ通知",
     "keywords": [
       '不正', '認証コード', '確認コード', 'ワンタイム',
       '本人確認をお願いします', '本人確認が必要です', '本人確認をしてください',
       'パスワード', '心当たりのない', 'アクセスを検出', 'アクセスがありました',
       'ログインを検知', 'ログイン通知', '新しいログインがありました', '見慣れない場所からのログイン',
+      'パスキー', 'セキュリティ通知', 'アクセスを許可しました', '共有しました',
+      '再設定用のメールアドレス', 'アカウントが復元されました',
       'security', 'verification code', 'suspicious',
-    ]
-  },
-  {
-    "label": "AI関連",
-    "keywords": [
-      'Anthropic', 'Claude', 'OpenAI', 'ChatGPT', 'GPT-', 'GPT4', 'GPT5', 'Gemini',
     ]
   },
   {
