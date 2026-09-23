@@ -92,11 +92,29 @@ DIRECT_DEBIT_BOILERPLATE_MARKERS = [
   '本メールは送信専用', 'ご不明な点について', '＜発行＞',
 ]
 
+# 口座振替と同じ銀行から来る、同じ定型の締めの文言を持つメール。
+# 「確認が必要なメール」の一般リストに出るときも、本題だけに整理する。
+CLEANABLE_BANK_SUBJECTS = [
+  '振込入金のお知らせ',
+]
 
-def _clean_direct_debit_body(body_text):
+
+def _clean_direct_debit_body(body_text, subject=None):
   lines = [line.strip() for line in body_text.splitlines() if line.strip()]
-  if lines and re.search(r'(様|さま)$', lines[0]):
-    lines = lines[1:]
+
+  # 先頭にある「件名の繰り返し」「〜様／〜さまの宛名行」を、両方とも順不同で読み飛ばす。
+  start = 0
+  while start < len(lines):
+    line = lines[start]
+    if subject and _normalize(line) == _normalize(subject):
+      start += 1
+      continue
+    if re.search(r'(様|さま)$', line):
+      start += 1
+      continue
+    break
+  lines = lines[start:]
+
   kept = []
   for line in lines:
     if any(marker in line for marker in DIRECT_DEBIT_BOILERPLATE_MARKERS):
@@ -458,7 +476,7 @@ def api_data():
           fields = _parse_direct_debit_fields(body_text)
           # 3項目が見つからない文章形式の通知は、定型の締めの文言を切り落とした
           # 本文をかわりに使う（取れなければ元のスニペットのまま）。
-          fallback_text = _clean_direct_debit_body(body_text) or snippet
+          fallback_text = _clean_direct_debit_body(body_text, subject) or snippet
           direct_debit_mail.append({
             "id": message['id'],
             "subject": subject,
@@ -503,12 +521,21 @@ def api_data():
         continue
 
       if len(payment_mail) < 8:
+        display_snippet = snippet
+        # 「振込入金のお知らせ」等、口座振替と同じ定型の締めの文言を持つ
+        # 銀行メールも、本文を取得して本題だけに整理する。
+        if any(_normalize(s) in _normalize(subject) for s in CLEANABLE_BANK_SUBJECTS):
+          full_msg = gmail_service.users().messages().get(
+            userId='me', id=message['id'], format='full'
+          ).execute()
+          body_text = _extract_plain_text(full_msg.get('payload', {}))
+          display_snippet = _clean_direct_debit_body(body_text, subject) or snippet
         payment_mail.append({
           "id": message['id'],
           "subject": subject,
           "from": sender,
           "date": date_str,
-          "snippet": snippet,
+          "snippet": display_snippet,
           "category": matched_label
         })
 
