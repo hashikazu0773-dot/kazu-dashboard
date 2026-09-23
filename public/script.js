@@ -288,6 +288,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const dateObj = new Date(mail.date);
       const dateStr = isNaN(dateObj.getTime()) ? mail.date : `${dateObj.getMonth() + 1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
 
+      const detailHtml = (mail.payee && mail.amount && mail.debit_date)
+        ? `
+        <div class="direct-debit-summary">
+          <div>振替先：${escapeHtml(mail.payee)}</div>
+          <div>金額：${escapeHtml(mail.amount)}</div>
+          <div>引落日：${escapeHtml(mail.debit_date)}</div>
+        </div>
+      `
+        : `<div class="mail-snippet">${escapeHtml(mail.snippet)}</div>`;
+
       const card = document.createElement('div');
       card.className = 'item-card direct-debit-card';
       card.innerHTML = `
@@ -296,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="mail-date">${escapeHtml(dateStr)}</span>
         </div>
         <div class="mail-subject">${escapeHtml(mail.subject)}</div>
-        <div class="mail-snippet">${escapeHtml(mail.snippet)}</div>
+        ${detailHtml}
       `;
       if (mail.id) {
         card.classList.add('tappable');

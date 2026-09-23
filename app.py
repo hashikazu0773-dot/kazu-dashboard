@@ -1,5 +1,7 @@
 import os
 import json
+import base64
+import re
 import datetime
 import unicodedata
 from zoneinfo import ZoneInfo
@@ -50,6 +52,37 @@ DELIVERED_KEYWORDS = [
 # 「確認が必要なメール」の8件上限とは別に、専用の枠へ必ず表示する。
 CLAUDE_CODE_NEWS_SENDER = 'no-reply@email.claude.com'
 CLAUDE_CODE_NEWS_MAX = 3
+
+# 口座振替のお知らせ本文から、この3項目だけを抜き出して表示する。
+# Gmailの「概要（スニペット）」は本文の先頭しか含まないため、
+# この3行は概要には出ない（本文をまるごと取得しないと読めない）。
+DIRECT_DEBIT_FIELD_PATTERNS = {
+  "payee": r'口座振替先\s*[：:]\s*(.+)',
+  "amount": r'引落金額\s*[：:]\s*(.+)',
+  "debit_date": r'口座引落日\s*[：:]\s*(.+)',
+}
+
+
+def _extract_plain_text(payload):
+  # Gmailメッセージのpayloadから、text/plain本文をデコードして取り出す。
+  # マルチパート（HTML版とテキスト版が両方入っている等）にも対応するため再帰的に探す。
+  body_data = (payload.get('body') or {}).get('data')
+  if payload.get('mimeType') == 'text/plain' and body_data:
+    return base64.urlsafe_b64decode(body_data).decode('utf-8', errors='replace')
+  for part in payload.get('parts') or []:
+    text = _extract_plain_text(part)
+    if text:
+      return text
+  return ''
+
+
+def _parse_direct_debit_fields(body_text):
+  fields = {}
+  for key, pattern in DIRECT_DEBIT_FIELD_PATTERNS.items():
+    match = re.search(pattern, body_text)
+    if match:
+      fields[key] = match.group(1).strip()
+  return fields
 
 
 def _normalize(text):
@@ -394,10 +427,20 @@ def api_data():
       # 専用リストに入れる（銀行・支払いには入れず二重に出さない）。
       if any(_normalize(kw) in haystack for kw in DIRECT_DEBIT_KEYWORDS):
         if len(direct_debit_mail) < 5:
+          # 概要（スニペット）には「口座振替先・引落金額・口座引落日」が出ないため、
+          # 本文をまるごと取得してこの3項目だけを抜き出す。
+          full_msg = gmail_service.users().messages().get(
+            userId='me', id=message['id'], format='full'
+          ).execute()
+          body_text = _extract_plain_text(full_msg.get('payload', {}))
+          fields = _parse_direct_debit_fields(body_text)
           direct_debit_mail.append({
             "id": message['id'],
             "subject": subject,
             "from": sender,
+            "payee": fields.get('payee'),
+            "amount": fields.get('amount'),
+            "debit_date": fields.get('debit_date'),
             "date": date_str,
             "snippet": snippet,
           })
